@@ -1,80 +1,51 @@
-//import mongoose, {Schema, Document } from "mongoose";
-import { Schema, Types, model, type Document } from 'mongoose';
+import { Schema, model, Document } from 'mongoose';
+import reactionSchema from './Reaction.js';
 
-interface IThought extends Document {
-    thoughtText: string,
-    createdAt: Date,
-    username: String,
-    userId: String,
-    reactions: IReaction[],
+const formatDate = (date: Date): any => {
+    return date.toLocaleString(); // Formats like: 4/10/2025, 3:12:48 PM
+    // You can customize with Intl.DateTimeFormat or moment.js if you prefer
 };
 
-// should be a subdocument
-interface IReaction extends Document {
-    reactionId: Schema.Types.ObjectId,
-    reactionBody: string, 
-    username: string,
-    createdAt: Date,
+interface IThought extends Document {
+    thoughtText: string;
+    createdAt: Schema.Types.Date;
+    username: string;
+    reactions: [typeof reactionSchema];
 }
-const reactionSchema = new Schema<IReaction>({
-    reactionId: { 
-        type: Schema.Types.ObjectId,
-        default: () => new Types.ObjectId() 
-    },
-    reactionBody: {
-        type: String,
-        required: true, 
-        maxlength: 280
-    },
-    username: {
-        type: String,
-         required: true
+
+const thoughtSchema = new Schema<IThought>(
+    {
+        thoughtText: {
+            type: String,
+            required: true,
+            minlength: 1,
+            maxlenght: 280
         },
-        // TODO: getter method required for createdAt. Unclear exactly what is meant by this.
-    createdAt: {
-        type: Date,
-        default: Date.now },
+        createdAt: {
+            type: Date,
+            default: Date.now,
+            get: formatDate
+        },
+        username: {
+            type: String,
+            required: true
+        },
+        reactions: {
+            type: [reactionSchema]
+        }
+    },
+    {
+        toJSON: {
+            virtuals: true,
+        }
+    }
+)
+thoughtSchema
+    .virtual('reactionCount')
+    .get(function () {
+        return this.reactions.length;
 });
 
-const thoughtSchema = new Schema<IThought>({
-    thoughtText: { 
-        type: String, 
-        required: true, 
-        minLength: 1, 
-        maxLength: 280},
-    // TODO: getter method required for createdAt. Unclear exactly what is meant by this.
-    createdAt: {
-        type: Date, 
-        default: Date.now 
-    },
-    username: {
-        type: String, 
-        required: true
-    },
-    userId: {
-        type: Schema.Types.ObjectId,
-        ref: 'User',
-        required: true,
-    },
-    reactions: [reactionSchema]
-},
-{
-    toJSON: {
-      virtuals: true,
-    },
-    id: false,
-  }
-  )
-  thoughtSchema.virtual('reactionCount').get(function() {
-    return this.reactions.length;
-  }); 
-
-
-
-const Thought = model ('Thought', thoughtSchema);
+const Thought = model('Thought', thoughtSchema);
 
 export default Thought;
-
-// const Thought = model<IThought>('Thought', thoughtSchema);
-
-// export { Thought, reactionSchema };
